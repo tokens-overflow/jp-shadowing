@@ -16,7 +16,7 @@ def run(cmd):
 def synth(text, voice, rate, out_wav, tmp):
     """一句 → wav，返回采样数"""
     mp3 = tmp / (out_wav.stem + ".mp3")
-    run(["python3","-m","edge_tts","--voice",voice,"--rate",rate,
+    run([sys.executable,"-m","edge_tts","--voice",voice,"--rate",rate,
          "--text",text,"--write-media",str(mp3)])
     run(["ffmpeg","-v","quiet","-y","-i",str(mp3),"-ac","1","-ar",str(SR),str(out_wav)])
     with wave.open(str(out_wav)) as w:
@@ -30,7 +30,7 @@ def build(segments, out_mp3, tmp):
         frames.append(synth(text, voice, rate, w, tmp))
         wavs.append(w)
     listfile = tmp / f"{out_mp3.stem}.txt"
-    listfile.write_text("".join(f"file '{w}'\n" for w in wavs))
+    listfile.write_text("".join(f"file '{w.resolve()}'\n" for w in wavs))
     run(["ffmpeg","-v","quiet","-y","-f","concat","-safe","0","-i",str(listfile),
          "-c:a","libmp3lame","-b:a","48k","-ac","1",str(out_mp3)])
     spans, acc = [], 0
@@ -40,7 +40,7 @@ def build(segments, out_mp3, tmp):
     return spans
 
 def main(day_dir):
-    d = Path(day_dir); lf = d/"lesson.json"
+    d = Path(day_dir).resolve(); lf = d/"lesson.json"
     L = json.loads(lf.read_text(encoding="utf-8"))
     tmp = d/".tmp"; tmp.mkdir(exist_ok=True)
 

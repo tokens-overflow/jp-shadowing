@@ -2,7 +2,10 @@
 # 每日一课：抓取 → 改写 → 合成 → 索引 → push
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+# nvm の node を優先（/usr/local/bin の古い node を掴まないように）
+NVM_NODE=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)
+export PATH="${NVM_NODE:-}:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+echo "  node $(node -v) / python $("$PWD/.venv/bin/python" -V 2>&1 | cut -d' ' -f2) (venv)"
 
 DATE="${1:-$(date +%F)}"
 DOW=$(date -j -f %F "$DATE" +%u 2>/dev/null || date -d "$DATE" +%u)
@@ -19,7 +22,7 @@ echo "② 口語稿に書き換え"
 node tools/build.mjs "$DATE" < /tmp/sh_article.json > /dev/null
 
 echo "③ 音声合成"
-python3 tools/tts.py "content/$DATE"
+"$PWD/.venv/bin/python" tools/tts.py "content/$DATE"
 
 echo "④ 索引更新"
 node tools/reindex.mjs

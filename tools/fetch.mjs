@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 抓 RSS → 选一篇没用过的 → 打印 article JSON
-import fs from 'fs'; import path from 'path';
-const ROOT = path.resolve(import.meta.dirname, '..');
+import fs from 'fs'; import path from 'path'; import {fileURLToPath} from 'url';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const UA = {headers:{'User-Agent':'Mozilla/5.0'}};
 
 const SOURCES = {
@@ -41,18 +41,28 @@ async function body(url){
 }
 
 const usedFile = path.join(ROOT,'content','used.json');
-const used = fs.existsSync(usedFile) ? JSON.parse(fs.readFileSync(usedFile,'utf8')) : [];
+let used = fs.existsSync(usedFile) ? JSON.parse(fs.readFileSync(usedFile,'utf8')) : [];
+if(used.length && typeof used[0]==='string') used = used.map(u=>({url:u,title:''}));  // 旧形式を移行
+const urls = new Set(used.map(u=>u.url));
+
+// 文字バイグラムの Dice 係数。同じ事件の別記事を弾く
+const bg = s => { const t=s.replace(/[\s　]/g,''); const r=new Set();
+  for(let i=0;i<t.length-1;i++) r.add(t.slice(i,i+2)); return r };
+function dice(a,b){ const A=bg(a),B=bg(b); if(!A.size||!B.size) return 0;
+  let n=0; for(const x of A) if(B.has(x)) n++; return 2*n/(A.size+B.size) }
+const dup = t => used.slice(0,12).some(u=>u.title && dice(t,u.title)>0.18);
 const type = process.argv[2] || 'news';
 
 let pool = [];
 for(const [site,url] of SOURCES[type]) pool.push(...await feed(site,url));
 // AI 関連を優先。無ければ一般開発トピックにフォールバック
 const AI = /\bAI\b|\bLLM\b|\bRAG\b|\bGPU\b|\bGPT\b|生成AI|機械学習|深層学習|大規模言語|エージェント|推論|ChatGPT|OpenAI|Anthropic|Claude|Gemini|Copilot|Transformer|ファインチューニング/;
-const fresh = pool.filter(i=>!used.includes(i.url));
+let fresh = pool.filter(i=>!urls.has(i.url) && !dup(i.title));
+if(!fresh.length) fresh = pool.filter(i=>!urls.has(i.url));   // 全部弾かれたら URL 重複だけで妥協
 const pick = fresh.find(i=>AI.test(i.title+i.desc)) || fresh[0];
 if(!pick){ console.error('新しい記事が見つかりません'); process.exit(2) }
 pick.body = await body(pick.url) || pick.desc;
 pick.type = type;
 fs.mkdirSync(path.dirname(usedFile),{recursive:true});
-fs.writeFileSync(usedFile, JSON.stringify([pick.url,...used].slice(0,400),null,0));
+fs.writeFileSync(usedFile, JSON.stringify([{url:pick.url,title:pick.title},...used].slice(0,400),null,0));
 console.log(JSON.stringify(pick,null,2));

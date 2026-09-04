@@ -123,3 +123,30 @@ body.showzh .s .zh{display:block}
 #rateVal{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums;
   flex:0 0 42px;text-align:right}
 .empty{color:var(--mut);text-align:center;padding:40px 20px;font-size:14px;line-height:1.8}
+
+/* ---- 録音 & 採点 ---- */
+.s.rec{opacity:1;background:var(--surf);border-left-color:#e0574f}
+.recbar{margin-top:9px;font-size:12.5px;font-weight:700;color:#e0574f;
+  letter-spacing:.06em;animation:bl 1s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.35}}
+.sc{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pill{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:20px;
+  background:var(--surf2);color:var(--mut);font-variant-numeric:tabular-nums}
+.pill.g{background:#2f6b33;color:#eafbe9}
+.pill.y{background:#8a6a1c;color:#fff6e0}
+.pill.r{background:#7d3430;color:#ffe9e7}
+.mini{border:0;border-radius:8px;padding:5px 10px;background:var(--surf2);
+  color:var(--tx);font-size:11.5px;font-family:inherit}
+.mini:active{background:var(--acc);color:var(--bg)}
+.heard{flex-basis:100%;font-size:12px;color:var(--mut);margin-top:3px;line-height:1.6}
+.avg{background:var(--surf);border-radius:12px;padding:14px;margin:12px 0 4px;
+  text-align:center;font-size:13px;color:var(--mut)}
+.avg b{font-size:30px;color:var(--acc);font-variant-numeric:tabular-nums;
+  display:block;margin-bottom:2px}
+.avg span{font-size:11.5px}
+.flash{position:fixed;left:50%;transform:translateX(-50%) translateY(-16px);
+  top:calc(max(env(safe-area-inset-top),8px) + 62px);
+  background:var(--acc);color:var(--bg);padding:9px 15px;border-radius:11px;
+  font-size:12.5px;font-weight:600;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;z-index:9;max-width:88vw;text-align:center}
+.flash.on{opacity:1;transform:translateX(-50%) translateY(0)}

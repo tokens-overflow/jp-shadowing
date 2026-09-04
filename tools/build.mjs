@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // article JSON(stdin) → claude で口語稿に書き換え → lesson.json
-import fs from 'fs'; import path from 'path'; import {execFileSync} from 'child_process';
-const ROOT = path.resolve(import.meta.dirname,'..');
+import fs from 'fs'; import path from 'path'; import {fileURLToPath} from 'url'; import {execFileSync} from 'child_process';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const art = JSON.parse(fs.readFileSync(0,'utf8'));
 const date = process.argv[2] || new Date().toISOString().slice(0,10);
 
@@ -45,7 +45,7 @@ ${SCENE}
  "type":"${art.type}",
  "title":"12字以内の日本語タイトル",
  "source":{"site":"${art.site}","title":${JSON.stringify(art.title)},"url":${JSON.stringify(art.url)}},
- "mono":{"label":"定例での共有（独白）","sentences":[{"ja":"…","zh":"自然な中国語訳"}]},
+ "mono":{"label":"定例での共有（独白）","sentences":[{"ja":"…","asr":"…","zh":"自然な中国語訳"}]},
  "dialog":{"label":"上司とのやりとり（対話）","turns":[{"sp":"A","ja":"…","zh":"…"}]},
  "vocab":[{"w":"語","r":"よみ","zh":"中国語の意味","note":"使い方。最重要の3〜5件はnoteを★で始める"}],
  "patterns":[{"p":"型","zh":"意味","use":"どんな場面で・なぜそう言うか。最重要の3〜4件はuseを★で始める"}]
@@ -62,6 +62,10 @@ ${SCENE}
    すべて mono か dialog に実際に出てくる語であること。
 4. patterns: 8〜10件。mono/dialog に実在する言い回しから抽出。
 5. zh は自然な中国語。直訳調にしない。
+5b. **asr**: その文を音声認識がそのまま書き起こしそうな表記にしたもの。
+   英字・記号・数字は「読み」で書く（RIZAP→ライザップ、OpenAI→オープンエーアイ、
+   GPT-6→ジーピーティーシックス、3割→さんわり）。それ以外は ja と同じでよい。
+   採点で表記ゆれによる減点を防ぐために使う。mono の各文に必ず付けること。
 6. 直近に出した語（なるべく重複を避ける。重要語の再登場は可）: ${recent.slice(0,60).join('、')||'なし'}
 
 JSONのみを出力。`;

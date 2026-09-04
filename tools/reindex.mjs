@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import fs from 'fs'; import path from 'path';
-const ROOT=path.resolve(import.meta.dirname,'..'), C=path.join(ROOT,'content');
+import fs from 'fs'; import path from 'path'; import {fileURLToPath} from 'url';
+const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'), C=path.join(ROOT,'content');
 const days = fs.readdirSync(C).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d))
   .filter(d=>fs.existsSync(path.join(C,d,'lesson.json')))
   .sort()
