@@ -66,25 +66,47 @@ ${SCENE}
    英字・記号・数字は「読み」で書く（RIZAP→ライザップ、OpenAI→オープンエーアイ、
    GPT-6→ジーピーティーシックス、3割→さんわり）。それ以外は ja と同じでよい。
    採点で表記ゆれによる減点を防ぐために使う。mono の各文に必ず付けること。
-6. 直近に出した語（なるべく重複を避ける。重要語の再登場は可）: ${recent.slice(0,60).join('、')||'なし'}
+6. 文字列値の中に半角ダブルクォート " を絶対に使わないこと（強調は「」を使う）。JSONが壊れます。
+7. 直近に出した語（なるべく重複を避ける。重要語の再登場は可）: ${recent.slice(0,60).join('、')||'なし'}
 
 JSONのみを出力。`;
 
-const raw = execFileSync('claude',['-p'],{input:PROMPT,encoding:'utf8',maxBuffer:1<<24});
-const m = raw.match(/\{[\s\S]*\}/);
-if(!m){ console.error('JSON が取れませんでした:\n'+raw.slice(0,800)); process.exit(1) }
-const L = JSON.parse(m[0]);
+function ask(p){ return execFileSync('claude',['-p'],{input:p,encoding:'utf8',maxBuffer:1<<24}) }
 
-// 検収
-const errs=[];
+function check(L){
+  const e=[];
+  if(!L.mono?.sentences || !L.dialog?.turns || !L.vocab || !L.patterns) return ['構造が不足'];
+  const chars = L.mono.sentences.map(s=>s.ja).join('').length;
+  if(L.mono.sentences.length<8||L.mono.sentences.length>13) e.push(`mono 文数 ${L.mono.sentences.length}（8〜13にする）`);
+  if(chars<280||chars>430) e.push(`mono 字数 ${chars}（330〜380にする）`);
+  if(L.dialog.turns.length<8) e.push(`dialog ターン ${L.dialog.turns.length}（10にする）`);
+  if(L.vocab.length<14) e.push(`vocab ${L.vocab.length}（18〜22にする）`);
+  if(L.patterns.length<6) e.push(`patterns ${L.patterns.length}（8〜10にする）`);
+  if(L.mono.sentences.some(s=>!s.asr)) e.push('mono の各文に asr が必要');
+  return e;
+}
+
+let L=null, why='';
+for(let n=1; n<=3 && !L; n++){
+  const p = n===1 ? PROMPT
+    : PROMPT + `\n\n# 前回の出力に問題がありました\n${why}\n必ず直して、JSONだけを出力してください。`;
+  let raw;
+  try{ raw = ask(p) }catch(e){ why='claude の呼び出しに失敗: '+String(e.message).slice(0,150); continue }
+  const m = raw.match(/\{[\s\S]*\}/);
+  if(!m){ why='JSON が見つかりませんでした'; console.error(`  試行${n}: JSONなし`); continue }
+  let cand;
+  try{ cand = JSON.parse(m[0]) }
+  catch(e){ why='JSONとして壊れています: '+e.message.slice(0,160)+
+              '（文字列値の中に半角の " を書かないこと）';
+            console.error(`  試行${n}: JSON壊れ`); continue }
+  const errs = check(cand);
+  if(errs.length){ why='仕様に合っていません: '+errs.join(' / ');
+                   console.error(`  試行${n}: ${errs.join(' / ')}`); continue }
+  L = cand;
+}
+if(!L){ console.error('3回試して失敗: '+why); process.exit(1) }
+
 const chars = L.mono.sentences.map(s=>s.ja).join('').length;
-if(L.mono.sentences.length<8||L.mono.sentences.length>13) errs.push(`mono 文数 ${L.mono.sentences.length}`);
-if(chars<280||chars>430) errs.push(`mono 字数 ${chars}`);
-if(L.dialog.turns.length<8) errs.push(`dialog ターン ${L.dialog.turns.length}`);
-if(L.vocab.length<14) errs.push(`vocab ${L.vocab.length}`);
-if(L.patterns.length<6) errs.push(`patterns ${L.patterns.length}`);
-if(errs.length){ console.error('検収 NG: '+errs.join(' / ')); process.exit(1) }
-
 const dir = path.join(ROOT,'content',date);
 fs.mkdirSync(dir,{recursive:true});
 fs.writeFileSync(path.join(dir,'lesson.json'), JSON.stringify(L,null,2));
